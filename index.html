@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tớ yêu Hải Ánh</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background-color: white; /* Nền trắng */
+      overflow: hidden;
+      height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      color: hotpink;
+      font-weight: bold;
+      text-shadow: 0 0 10px #ff69b4, 0 0 20px #ff69b4;
+      z-index: 10;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+  <div id="text">Tớ yêu Hải Ánh</div>
+  <canvas id="heartCanvas"></canvas>
+  <canvas id="textCanvas"></canvas>
+
+  <script>
+    // Setup canvases
+    const heartCanvas = document.getElementById("heartCanvas");
+    const heartCtx = heartCanvas.getContext("2d");
+    const textCanvas = document.getElementById("textCanvas");
+    const textCtx = textCanvas.getContext("2d");
+
+    function resize() {
+      heartCanvas.width = window.innerWidth;
+      heartCanvas.height = window.innerHeight;
+      textCanvas.width = window.innerWidth;
+      textCanvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Heart parametric function
+    function heartFunction(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+      return { x, y };
+    }
+
+    // Particle for heart dots
+    class Particle {
+      constructor(x, y, dx, dy, size, color) {
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy;
+        this.size = size;
+        this.color = color;
+        this.alpha = 1;
+      }
+      update() {
+        this.x += this.dx;
+        this.y += this.dy;
+        this.alpha -= 0.01;
+        if (this.alpha < 0) this.alpha = 0;
+      }
+      draw(ctx) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${this.color.r},${this.color.g},${this.color.b},${this.alpha})`;
+        ctx.shadowColor = `rgba(${this.color.r},${this.color.g},${this.color.b},${this.alpha})`;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+      }
+    }
+
+    // Text particle falling from top
+    class TextParticle {
+      constructor(text, x, y, dy, color, size) {
+        this.text = text;
+        this.x = x;
+        this.y = y;
+        this.dy = dy;
+        this.color = color;
+        this.size = size;
+        this.opacity = 1;
+      }
+      update() {
+        this.y += this.dy;
+        this.opacity -= 0.005;
+        if(this.opacity < 0) this.opacity = 0;
+      }
+      draw(ctx) {
+        ctx.font = `${this.size}px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif`;
+        ctx.fillStyle = `rgba(${this.color.r},${this.color.g},${this.color.b},${this.opacity})`;
+        ctx.shadowColor = `rgba(${this.color.r},${this.color.g},${this.color.b},${this.opacity})`;
+        ctx.shadowBlur = 5;
+        ctx.fillText(this.text, this.x, this.y);
+      }
+    }
+
+    // Colors for falling texts (added diverse colors)
+    function getRandomColor() {
+      const colors = [
+        {r:0, g:128, b:255},   // blue
+        {r:255, g:0, b:0},     // red
+        {r:128, g:0, b:128},   // purple
+        {r:255, g:215, b:0},   // gold (yellow)
+        {r:255, g:105, b:180}, // hotpink
+        {r:139, g:69, b:19},   // brown
+        {r:255, g:255, b:255}, // white
+        {r:128, g:128, b:128}  // gray
+      ];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Setup particles arrays
+    const heartParticles = [];
+    const fallingTexts = [];
+
+    // Messages to fall
+    const messages = ["tớ yêu cậu", "tớ thương cậu"];
+
+    function animate() {
+      heartCtx.clearRect(0, 0, heartCanvas.width, heartCanvas.height);
+      textCtx.clearRect(0, 0, textCanvas.width, textCanvas.height);
+
+      // Heart particles (dense)
+      for(let i=0; i < 7; i++) {
+        const t = Math.random() * Math.PI * 2;
+        const pos = heartFunction(t);
+        const x = heartCanvas.width / 2 + pos.x * 15;
+        const y = heartCanvas.height / 2 - pos.y * 15;
+        const dx = (Math.random() - 0.5) * 1.2;
+        const dy = (Math.random() - 0.5) * 1.2;
+        const size = Math.random() * 2 + 1;
+        const color = {r:255, g:105, b:180};
+        heartParticles.push(new Particle(x, y, dx, dy, size, color));
+      }
+
+      // Update and draw heart particles
+      for(let i = 0; i < heartParticles.length; i++) {
+        const p = heartParticles[i];
+        p.update();
+        p.draw(heartCtx);
+        if (p.alpha <= 0) {
+          heartParticles.splice(i, 1);
+          i--;
+        }
+      }
+
+      // Add falling texts randomly
+      if (Math.random() < 0.12) {
+        const text = messages[Math.floor(Math.random() * messages.length)];
+        const x = Math.random() * textCanvas.width;
+        const y = -20;
+        const dy = 1 + Math.random() * 2;
+        const size = 16 + Math.random() * 10;
+        const color = getRandomColor();
+        fallingTexts.push(new TextParticle(text, x, y, dy, color, size));
+      }
+
+      // Update and draw falling texts
+      for(let i = 0; i < fallingTexts.length; i++) {
+        const f = fallingTexts[i];
+        f.update();
+        f.draw(textCtx);
+        if (f.opacity <= 0 || f.y > textCanvas.height + 50) {
+          fallingTexts.splice(i, 1);
+          i--;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
